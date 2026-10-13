@@ -1,21 +1,34 @@
-# Cảm Xúc Club — Thư mời khách quý
+# Cảm Xúc Club — Đăng ký khách quý
 
-Trang tĩnh HTML/CSS/JavaScript, không cần cài thư viện hoặc bước build. Toàn bộ ảnh và font đi kèm, không phụ thuộc vào địa chỉ Sites.
+HTML/CSS/JavaScript, ảnh và font đi kèm; API Vercel lưu đăng ký vào Google Sheets thông qua Apps Script. Fanpage: https://www.facebook.com/Camxuc.club.
 
-## Vercel
-1. Giải nén, đưa nội dung thư mục này lên một Git repository.
-2. Import repository trên Vercel, chọn Framework Preset: Other.
-3. Root Directory: thư mục chứa index.html. Không đặt Build Command; Output Directory: `.`.
-4. Deploy.
+## 1. Chuẩn bị Google Sheets
+1. Tạo Google Sheets mới, đặt tên “Cảm Xúc Club — Khách đăng ký”. Giữ bảng riêng tư.
+2. Chọn Extensions / Tiện ích mở rộng → Apps Script.
+3. Dán nội dung `setup/Code.gs` vào trình chỉnh sửa, lưu lại.
+4. Chọn hàm `setup`, bấm Run và cấp quyền cho tài khoản của bạn. Hàm tạo tab `DangKy` và khóa riêng.
+5. Trong Project Settings → Script Properties, sao chép giá trị `REGISTRATION_SECRET`. Không chia sẻ khóa này và không đưa vào mã frontend.
+6. Deploy → New deployment → Web app. Execute as: Me. Who has access: Anyone. Bấm Deploy, sao chép URL kết thúc `/exec`.
 
-Xem tại máy: `python3 -m http.server 8000`, mở http://localhost:8000.
+Google Sheets phải thuộc tài khoản thực hiện triển khai. Nếu Workspace chặn web app cho Anyone, cần dùng tài khoản được phép hoặc thay phương án kết nối. Khi chỉnh Apps Script, cập nhật deployment sang version mới.
 
-## Chỉnh sửa
-- Nội dung, thời gian, địa điểm: index.html; nếu đổi lịch, cập nhật phần tạo ICS và lời phản hồi trong app.js.
-- Màu, font và bố cục responsive: styles.css.
-- Ảnh nền: assets/music-background.jpg.
-- Font có hỗ trợ tiếng Việt nằm trong assets/fonts.
+## 2. Triển khai Vercel
+1. Đưa toàn bộ mã nguồn lên Git repository, import vào Vercel.
+2. Framework Preset: Other; Root Directory: thư mục chứa index.html; không đặt Build Command; Output Directory: `.`.
+3. Vercel → Settings → Environment Variables, thêm:
+   - `GOOGLE_SCRIPT_URL`: URL `/exec` ở bước trên.
+   - `REGISTRATION_SECRET`: khóa từ Script Properties.
+4. Áp dụng cho Production (và Preview nếu muốn kiểm tra), rồi Deploy / Redeploy.
 
-Nút phản hồi tạo lời nhắn để khách sao chép/chia sẻ cho người mời; không lưu đăng ký vào cơ sở dữ liệu. Fanpage chưa có liên kết chính thức nên nút này đang bị vô hiệu hóa. Lịch dùng giờ Việt Nam.
+Đừng mở công khai sheet hoặc thêm khóa bí mật vào app.js. Giao diện chỉ gọi `/api/register`; URL Apps Script và khóa nằm ở Vercel phía server.
 
-Đã giữ nội dung, ảnh và chức năng của bản trang đang hoạt động; thay toàn bộ stylesheet để tránh các lớp ghi đè tích lũy. Chưa kiểm tra trực tiếp bằng trình duyệt trong phiên tạo mã nguồn.
+## 3. Kiểm tra trước khi gửi khách
+- Gửi một đăng ký thử từ website Vercel. Kiểm tra tab DangKy có dòng mới trước khi sử dụng chính thức.
+- Kiểm tra số điện thoại giữ số 0 đầu, số người và lời nhắn chính xác.
+- Bấm gửi lại với cùng dữ liệu/mã: không tạo dòng trùng.
+- Xác nhận thông tin với khách và cập nhật cột Trạng thái trực tiếp trong Sheets.
+- Nếu chưa cấu hình hoặc kết nối lỗi, website không báo thành công giả; hướng khách tới fanpage.
+
+Các cột: mã đăng ký, thời gian, tên, điện thoại, số người, người mời, lời nhắn, đồng ý liên hệ, trạng thái. Thành công nghĩa là đã nhận đăng ký, chưa phải xác nhận chỗ ngồi. Không gửi email/SMS tự động. Có kiểm tra dữ liệu, honeypot và chống ghi trùng; chưa tích hợp CAPTCHA cho lưu lượng công khai lớn.
+
+Chưa kiểm tra đầu cuối với tài khoản Google/Vercel thực tế. `python3 -m http.server` chỉ xem được giao diện; cần Vercel để chạy API.

@@ -26,18 +26,48 @@ $('#mobileReply').addEventListener('click', () => replyDialog.showModal());
 $('#close').addEventListener('click', () => replyDialog.close());
 $('#imageClose').addEventListener('click', () => imageDialog.close());
 
-$('#rsvp').addEventListener('submit', (event) => {
+let requestId = null;
+let submittedPayload = '';
+$('#rsvp').addEventListener('submit', async (event) => {
   event.preventDefault();
   const name = $('#guestName').value.trim();
-  if (!name) { $('#guestName').focus(); return; }
+  const phone = $('#guestPhone').value.trim();
+  const count = Number($('#guestCount').value);
   const inviter = $('#inviter').value.trim();
-  const count = $('#guestCount').value;
   const note = $('#guestNote').value.trim();
-  // User input is assigned as plain text; it is never interpreted as HTML.
-  $('#replyText').value = `Kính gửi ${inviter || 'người mời'}, tôi là ${name}. Cảm ơn lời mời tới Dáng Hình Của Yêu Thương của Cảm Xúc Club. Tôi đăng ký tham dự cùng người thân, tổng cộng ${count} người, lúc 19:30 ngày 18/10/2026 tại Vịnh Hoàng Hôn, Hạ Long. Xin phản hồi để xác nhận việc đón tiếp.${note ? '\nLời nhắn: ' + note : ''}`;
-  $('#replyOutput').hidden = false;
-  $('#replyText').focus();
-  $('#replyStatus').textContent = 'Lời báo đã sẵn sàng. Hãy gửi cho người đã mời anh chị.';
+  const status = $('#replyStatus');
+  if (!name || !/^[+\d ().-]{8,20}$/.test(phone)) {
+    status.textContent = 'Xin kiểm tra tên và số điện thoại của anh chị.';
+    return;
+  }
+  const payload = {name, phone, count, inviter, note, consent: $('#consent').checked, website: $('#website').value};
+  const fingerprint = JSON.stringify(payload);
+  if (fingerprint !== submittedPayload) {
+    requestId = crypto.randomUUID();
+    submittedPayload = fingerprint;
+  }
+  const button = $('#submitRegistration');
+  button.disabled = true;
+  button.textContent = 'Đang gửi…';
+  status.textContent = 'Xin chờ trong giây lát.';
+  try {
+    const response = await fetch('/api/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({...payload, requestId}),
+      signal: AbortSignal.timeout(25000),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.message || 'Chưa gửi được đăng ký. Xin thử lại hoặc liên hệ fanpage.');
+    $('#replyText').value = `Tôi là ${name}. Tôi đã gửi đăng ký tham dự Dáng Hình Của Yêu Thương của Cảm Xúc Club, tổng cộng ${count} người, lúc 19:30 ngày 18/10/2026 tại Vịnh Hoàng Hôn, Hạ Long. Mã đăng ký: ${requestId}.`;
+    $('#replyOutput').hidden = false;
+    status.textContent = 'Cảm ơn anh chị! Ban tổ chức đã nhận thông tin và sẽ liên hệ xác nhận. Mã đăng ký: ' + requestId;
+    button.textContent = 'Đã nhận đăng ký';
+  } catch (error) {
+    status.textContent = error.name === 'TimeoutError' ? 'Chưa xác định được kết quả gửi. Xin thử lại; cùng một đăng ký sẽ không bị ghi trùng.' : error.message;
+    button.disabled = false;
+    button.textContent = 'Gửi lại đăng ký';
+  }
 });
 
 $('#copyReply').addEventListener('click', async () => {
